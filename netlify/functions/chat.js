@@ -1,81 +1,68 @@
-return new Response(JSON.stringify({
-  reply: "DEBUG_OK_123",
-  now: new Date().toISOString()
-}), { headers: { "Content-Type": "application/json" }, status: 200 });
-export default async (req) => {
-  try {
-    // Frontend’den gelen mesajı alıyoruz
-    const { message, mode } = await req.json();
+const fetch = (...args) =>
+  import("node-fetch").then(({ default: fetch }) => fetch(...args));
 
-    // Netlify Environment Variable’dan API key’i çekiyoruz
+exports.handler = async function (event) {
+  try {
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      return new Response(
-        JSON.stringify({ reply: "API key yok kanka 😅 Netlify ENV eklemen lazım" }),
-        { headers: { "Content-Type": "application/json" }, status: 200 }
-      );
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ reply: "API key yok 😵‍💫" }),
+      };
     }
 
-    // 🔒 KİLİTLİ PROMPT (küfür = 0)
-    const systemPrompt = `
-Sen WhatsApp'ta konuşan Fatik'sin.
-Dil: Türkçe.
-Ton: samimi, sıcak, Z kuşağı.
-Uzunluk: orta (genelde 1–3 cümle).
-Bazen emoji kullanabilirsin 🙂.
+    const body = JSON.parse(event.body || "{}");
+    const message = body.message || "selam";
 
-KESİN KURALLAR:
-- Küfür, hakaret, aşağılayıcı söz YOK (0 tolerans).
-- Aşırı uzun paragraf YOK.
-- Kullanıcı sert yazsa bile sen sakin ve temiz kal.
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          {
+            role: "system",
+            content:
+              "Sen Fatih’in samimi, biraz eğlenceli ama saygılı konuşan sohbet oyunundaki partnerisin.",
+          },
+          { role: "user", content: message },
+        ],
+        temperature: 0.8,
+        max_tokens: 150,
+      }),
+    });
 
-Cinsel içerik:
-- ${mode === "naughty"
-      ? "Flörtöz ve imalı olabilir ama açık saçık detay yok."
-      : "Temiz, hafif flört olabilir."}
-    `.trim();
+    const data = await response.json();
 
-   const response = await fetch("https://api.openai.com/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    "Authorization": `Bearer ${apiKey}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: String(message || "") }
-    ],
-    temperature: 0.9,
-    max_tokens: 140
-  }),
-});
+    if (!response.ok) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          reply: "OpenAI hata döndü 😵‍💫",
+          status: response.status,
+          error: data,
+        }),
+      };
+    }
 
-const data = await response.json();
+    const reply =
+      data?.choices?.[0]?.message?.content || "Bir an afalladım 😅";
 
-// 🔥 BURASI DEBUG: OpenAI error dönüyorsa ekranda göster
-if (!response.ok) {
-  return new Response(JSON.stringify({
-    reply: "OpenAI hata döndü 😵‍💫",
-    status: response.status,
-    error: data?.error || data
-  }), { headers: { "Content-Type": "application/json" }, status: 200 });
-}
-
-// 정상 cevap
-const reply = data?.choices?.[0]?.message?.content?.trim();
-
-if (!reply) {
-  return new Response(JSON.stringify({
-    reply: "Cevap boş geldi 😅",
-    debug: data
-  }), { headers: { "Content-Type": "application/json" }, status: 200 });
-}
-
-return new Response(JSON.stringify({ reply }), {
-  headers: { "Content-Type": "application/json" },
-  status: 200
-});
-
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ reply }),
+    };
+  } catch (err) {
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        reply: "Function çöktü 😵",
+        error: String(err),
+      }),
+    };
+  }
+};
