@@ -1,3 +1,7 @@
+return new Response(JSON.stringify({
+  reply: "DEBUG_OK_123",
+  now: new Date().toISOString()
+}), { headers: { "Content-Type": "application/json" }, status: 200 });
 export default async (req) => {
   try {
     // Frontend’den gelen mesajı alıyoruz
@@ -74,3 +78,4 @@ return new Response(JSON.stringify({ reply }), {
   headers: { "Content-Type": "application/json" },
   status: 200
 });
+
