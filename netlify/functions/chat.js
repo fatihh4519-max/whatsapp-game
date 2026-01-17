@@ -32,40 +32,45 @@ Cinsel içerik:
       : "Temiz, hafif flört olabilir."}
     `.trim();
 
-    // OpenAI API çağrısı
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: String(message || "") }
-        ],
-        temperature: 0.9,
-        max_tokens: 140
-      }),
-    });
+   const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    model: "gpt-4o-mini",
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: String(message || "") }
+    ],
+    temperature: 0.9,
+    max_tokens: 140
+  }),
+});
 
-    const data = await response.json();
+const data = await response.json();
 
-    const reply =
-      data?.choices?.[0]?.message?.content?.trim() ||
-      "bir an duraksadım 😅";
+// 🔥 BURASI DEBUG: OpenAI error dönüyorsa ekranda göster
+if (!response.ok) {
+  return new Response(JSON.stringify({
+    reply: "OpenAI hata döndü 😵‍💫",
+    status: response.status,
+    error: data?.error || data
+  }), { headers: { "Content-Type": "application/json" }, status: 200 });
+}
 
-    return new Response(
-      JSON.stringify({ reply }),
-      { headers: { "Content-Type": "application/json" }, status: 200 }
-    );
+// 정상 cevap
+const reply = data?.choices?.[0]?.message?.content?.trim();
 
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ reply: "şu an ufak bi hata oldu, tekrar yaz 😅" }),
-      { headers: { "Content-Type": "application/json" }, status: 200 }
-    );
-  }
-};
+if (!reply) {
+  return new Response(JSON.stringify({
+    reply: "Cevap boş geldi 😅",
+    debug: data
+  }), { headers: { "Content-Type": "application/json" }, status: 200 });
+}
 
+return new Response(JSON.stringify({ reply }), {
+  headers: { "Content-Type": "application/json" },
+  status: 200
+});
