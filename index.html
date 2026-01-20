@@ -1,824 +1,282 @@
-<!-- =========================
-FILE: index.html
-========================= -->
 <!doctype html>
 <html lang="tr">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>WhatsApp Chat Game</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WhatsApp Chat</title>
+  <style>
+    :root{
+      --wa-green:#008069;
+      --bg:#0b141a;
+      --panel:#111b21;
+      --panel2:#202c33;
+      --text:#e9edef;
+      --muted:#8696a0;
+      --bubble-me:#005c4b;
+      --bubble-you:#202c33;
+    }
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    body{margin:0;background:var(--bg);color:var(--text);height:100vh;display:flex;justify-content:center}
+    .app{width:min(980px,100%);height:100vh;display:flex;background:var(--panel)}
+    .left{width:360px;max-width:100%;border-right:1px solid rgba(255,255,255,.06);display:flex;flex-direction:column}
+    .topbar{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:var(--panel2)}
+    .meRow{display:flex;align-items:center;gap:10px}
+    .avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;background:#333}
+    .title{font-weight:700}
+    .search{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .search input{width:100%;padding:10px 12px;border-radius:10px;border:0;outline:0;background:#111f26;color:var(--text)}
+    .list{flex:1;overflow:auto}
+    .chatRow{display:flex;gap:12px;padding:10px 12px;cursor:pointer}
+    .chatRow:hover{background:rgba(255,255,255,.03)}
+    .chatRow.active{background:rgba(255,255,255,.06)}
+    .chatMeta{flex:1;min-width:0}
+    .rowTop{display:flex;justify-content:space-between;gap:10px}
+    .name{font-weight:700}
+    .time{color:var(--muted);font-size:12px}
+    .preview{color:var(--muted);font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
 
-<style>
-  :root{
-    --wa-green:#008069;
-    --bg:#efeae2;
-    --line:#e9e9e9;
-    --me:#d9fdd3;
-    --you:#ffffff;
-    --text:#111;
-    --muted:#6b6b6b;
-    --tick:#667781;
-    --tickRead:#53bdeb;
-    --chip:#eaf5ff;
-    --chipText:#1e6aa6;
-    --danger:#e74c3c;
-    --shadow:0 12px 28px rgba(0,0,0,.16);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);display:flex;justify-content:center}
-  .app{width:100%;max-width:430px;height:100vh;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
+    .right{flex:1;display:flex;flex-direction:column}
+    .chatHeader{height:56px;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--panel2)}
+    .backBtn{display:none;background:transparent;border:0;color:var(--text);font-size:18px;cursor:pointer}
+    .chatInfo{display:flex;flex-direction:column;line-height:1.1}
+    .online{color:var(--muted);font-size:12px}
 
-  .header{
-    background:var(--wa-green);
-    color:#fff;
-    padding:10px 12px;
-    display:flex;align-items:center;gap:10px;
-    position:relative;z-index:10;
-  }
-  .back{
-    width:34px;height:34px;border-radius:999px;border:0;background:rgba(255,255,255,.14);
-    color:#fff;font-size:18px;font-weight:900;cursor:pointer;display:none;
-  }
-  .titlewrap{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
-  .avatar{
-    width:38px;height:38px;border-radius:999px;object-fit:cover;
-    border:2px solid rgba(255,255,255,.3);
-    background:rgba(255,255,255,.14);
-    flex:0 0 auto;
-  }
-  .ttext{display:flex;flex-direction:column;min-width:0}
-  .name{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .status{font-size:12px;opacity:.9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .msgs{flex:1;overflow:auto;padding:14px 12px;background:#0f1a20}
+    .bubble{max-width:78%;padding:10px 12px;border-radius:14px;margin:6px 0;white-space:pre-wrap;word-wrap:break-word}
+    .me{margin-left:auto;background:var(--bubble-me)}
+    .you{margin-right:auto;background:var(--bubble-you)}
+    .tick{font-size:11px;color:rgba(255,255,255,.6);margin-top:4px;text-align:right}
+    .inputBar{height:60px;display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--panel2)}
+    .inputBar input{flex:1;padding:12px 14px;border-radius:999px;border:0;outline:0;background:#111f26;color:var(--text)}
+    .send{background:var(--wa-green);border:0;color:white;border-radius:999px;padding:12px 14px;cursor:pointer;font-weight:700}
 
-  /* Toasts */
-  .toastWrap{
-    position:fixed;top:10px;left:50%;transform:translateX(-50%);
-    width:min(420px, calc(100% - 18px));
-    z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;
-  }
-  .toast{
-    background:rgba(255,255,255,.92);
-    border:1px solid rgba(0,0,0,.08);
-    border-radius:18px;
-    padding:10px 12px;
-    box-shadow:var(--shadow);
-    animation: toastIn .22s ease both;
-    backdrop-filter: blur(10px);
-  }
-  .toastTop{display:flex;align-items:center;justify-content:space-between;font-size:12px;opacity:.75;margin-bottom:6px}
-  .toastTop .appname{display:flex;align-items:center;gap:8px;font-weight:900}
-  .waIcon{width:18px;height:18px;border-radius:6px;background:#25d366;display:inline-grid;place-items:center;color:#fff;font-size:12px;font-weight:950}
-  .toastMain{display:flex;gap:10px;align-items:flex-start}
-  .toastAva{width:30px;height:30px;border-radius:999px;background:#dfe7e5;display:grid;place-items:center;font-weight:900;color:#234;flex:0 0 auto}
-  .toastMeta{min-width:0}
-  .toastName{font-weight:950;font-size:13px;line-height:1.1}
-  .toastMsg{font-size:13px;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:3px}
-  .toast.out{animation: toastOut .25s ease both}
-  @keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes toastOut{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-8px)}}
-
-  /* Screens */
-  .screen{flex:1;display:none;overflow:hidden}
-  .screen.active{display:flex;flex-direction:column}
-
-  /* Chat list */
-  .list{background:#fff;flex:1;overflow:auto}
-  .row{display:flex;gap:12px;align-items:center;padding:12px;border-bottom:1px solid var(--line);cursor:pointer}
-  .row:hover{background:#fafafa}
-  .row .ava{
-    width:46px;height:46px;border-radius:999px;object-fit:cover;flex:0 0 auto;
-    background:#dfe7e5;display:grid;place-items:center;font-weight:900;color:#234;
-  }
-  .row .meta{min-width:0;flex:1}
-  .row .meta .rname{font-weight:900}
-  .row .meta .prev{opacity:.7;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px;min-height:18px}
-  .row .time{font-size:12px;opacity:.6;flex:0 0 auto}
-
-  /* Chat area */
-  .chatArea{flex:1;overflow:hidden;display:flex;flex-direction:column;background:var(--bg)}
-  .chat{flex:1;padding:12px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
-
-  /* Bubbles */
-  .bubble{
-    max-width:78%;
-    padding:10px 12px 6px 12px;
-    border-radius:14px;
-    font-size:14px;
-    color:var(--text);
-    position:relative;
-    box-shadow:0 1px 2px rgba(0,0,0,.08);
-  }
-  .you{background:var(--you);align-self:flex-start;border-top-left-radius:8px}
-  .me{background:var(--me);align-self:flex-end;border-top-right-radius:8px}
-  .you::before{
-    content:"";position:absolute;left:-6px;top:0;width:12px;height:12px;background:var(--you);
-    clip-path: polygon(100% 0, 0 0, 100% 100%);filter:drop-shadow(-1px 1px 0 rgba(0,0,0,.06));
-  }
-  .me::after{
-    content:"";position:absolute;right:-6px;top:0;width:12px;height:12px;background:var(--me);
-    clip-path: polygon(0 0, 100% 0, 0 100%);filter:drop-shadow(1px 1px 0 rgba(0,0,0,.06));
-  }
-  .metaLine{
-    margin-top:6px;display:flex;justify-content:flex-end;gap:6px;align-items:center;
-    font-size:11px;color:var(--muted);user-select:none;
-  }
-  .ticks{font-weight:900;color:var(--tick);letter-spacing:-2px}
-  .ticks.read{color:var(--tickRead)}
-  .ticks span{display:inline-block;transform:translateY(-.3px)}
-  .ticks span + span{margin-left:-2px}
-
-  /* Chips */
-  .chips{
-    padding:8px 10px;display:flex;gap:8px;flex-wrap:wrap;
-    background:rgba(255,255,255,.75);
-    border-top:1px solid rgba(0,0,0,.06);
-    backdrop-filter: blur(6px);
-  }
-  .chip{
-    border:1px solid rgba(0,0,0,.08);
-    background:var(--chip);
-    color:var(--chipText);
-    font-weight:900;
-    border-radius:999px;
-    padding:9px 12px;
-    cursor:pointer;
-    transition:transform .12s ease, filter .12s ease;
-  }
-  .chip:hover{transform:translateY(-1px);filter:brightness(1.03)}
-  .chip:active{transform:scale(.98)}
-  .chip.danger{
-    background:#ffecec;color:#b21f2d;border-color:rgba(178,31,45,.18);
-  }
-
-  /* Input bar */
-  .inputBar{
-    padding:10px 10px calc(10px + env(safe-area-inset-bottom));
-    display:flex;gap:8px;align-items:flex-end;
-    background:rgba(255,255,255,.88);
-    border-top:1px solid rgba(0,0,0,.06);
-    backdrop-filter: blur(8px);
-  }
-  .roundBtn{
-    width:40px;height:40px;border-radius:999px;border:0;background:#fff;
-    box-shadow:0 2px 10px rgba(0,0,0,.08);
-    cursor:pointer;display:grid;place-items:center;color:#4a4a4a;font-weight:950;
-  }
-  .composer{
-    flex:1;background:#fff;border-radius:22px;padding:10px 12px;
-    box-shadow:0 2px 10px rgba(0,0,0,.08);
-    border:1px solid rgba(0,0,0,.06);
-    min-height:40px;display:flex;align-items:center;
-  }
-  .composer input{width:100%;border:0;outline:0;font-size:14px;background:transparent}
-  .send{
-    width:44px;height:44px;border-radius:999px;border:0;
-    background:var(--wa-green);
-    color:#fff;font-weight:950;cursor:pointer;
-    box-shadow:0 8px 18px rgba(0,128,105,.25);
-  }
-
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;align-items:center;justify-content:center;z-index:99;padding:18px}
-  .box{background:#fff;padding:14px;border-radius:14px;max-width:92%;width:min(420px,100%)}
-  .box img{width:100%;border-radius:12px;display:block}
-
-  .ratatata{margin-top:10px;font-size:20px;font-weight:950;letter-spacing:2px;text-align:center}
-  .ratatata.shake{animation:shake .09s infinite alternate}
-  @keyframes shake{from{transform:translateX(-2px)}to{transform:translateX(2px)}}
-
-  .storm{position:fixed;inset:0;pointer-events:none;z-index:120}
-  .emoji{position:absolute;font-size:28px;animation:fall 1.2s linear forwards;opacity:.95;filter:drop-shadow(0 4px 6px rgba(0,0,0,.25))}
-  @keyframes fall{
-    from{transform:translateY(-40px) rotate(0deg);opacity:0}
-    10%{opacity:1}
-    to{transform:translateY(calc(100vh + 60px)) rotate(220deg);opacity:0}
-  }
-  .chatimg{width:210px;border-radius:12px;cursor:pointer;display:block}
-  .viewonce{border:1px dashed #aaa;border-radius:12px;padding:10px;cursor:pointer;background:#fff;font-weight:900;user-select:none}
-</style>
+    @media (max-width:820px){
+      .left{width:100%}
+      .right{display:none}
+      .app.mobileChat .left{display:none}
+      .app.mobileChat .right{display:flex}
+      .backBtn{display:inline}
+    }
+  </style>
 </head>
-
 <body>
-<div class="toastWrap" id="toastWrap"></div>
-
-<div class="app">
-  <div class="header">
-    <button class="back" id="backBtn" aria-label="Geri">‹</button>
-    <div class="titlewrap">
-      <img class="avatar" id="headerAvatar" src="avatar.jpg" alt="profil">
-      <div class="ttext">
-        <div class="name" id="headerName">Sohbetler</div>
-        <div class="status" id="headerStatus">WhatsApp gibi 😏</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="screen active" id="listScreen">
-    <div class="list" id="chatList"></div>
-  </div>
-
-  <div class="screen" id="chatScreen">
-    <div class="chatArea">
-      <div class="chat" id="chat"></div>
-      <div class="chips" id="chips"></div>
-      <div class="inputBar">
-        <button class="roundBtn" id="plusBtn" title="Ekle">＋</button>
-        <div class="composer">
-          <input id="msgInput" placeholder="Mesaj" autocomplete="off" />
+  <div class="app" id="app">
+    <aside class="left">
+      <div class="topbar">
+        <div class="meRow">
+          <img class="avatar" src="/avatar-default.jpg" alt="">
+          <div class="title">Sohbetler</div>
         </div>
-        <button class="send" id="sendBtn" title="Gönder">➤</button>
+        <div style="color:var(--muted);font-size:12px">online</div>
       </div>
-    </div>
+
+      <div class="search">
+        <input id="q" placeholder="Ara..." />
+      </div>
+
+      <div class="list" id="list"></div>
+    </aside>
+
+    <main class="right">
+      <div class="chatHeader">
+        <button class="backBtn" id="back">←</button>
+        <img class="avatar" id="headAva" src="/avatar-default.jpg" alt="">
+        <div class="chatInfo">
+          <div class="name" id="headName">—</div>
+          <div class="online" id="headOnline">çevrimiçi</div>
+        </div>
+      </div>
+
+      <div class="msgs" id="msgs"></div>
+
+      <div class="inputBar">
+        <input id="msgInput" placeholder="Mesaj yaz" />
+        <button class="send" id="sendBtn">Gönder</button>
+      </div>
+    </main>
   </div>
-</div>
 
 <script>
-  // ===== Main list (Hatce/Oe1 chats removed)
-  const chats = [
-    { id:"fatik",  name:"Fatik",  avatar:"avatar.jpg", preview:"Hazırsan küçük bir oyun var 😏", time:"şimdi" },
-    { id:"sevval", name:"Şevval", avatar:"", preview:"aşkoooo", time:"15:02" },
-    { id:"anne",   name:"Anneeeyyy", avatar:"", preview:"Fatih oğlumu üzersen sana hakkımı helal etmem..", time:"14:41" },
-    { id:"kuyum",  name:"KUYUMCULAR DERNEĞİ", avatar:"", preview:"Kırımlı kuyumculuktan rekor satış tebrik ederiz...", time:"13:12" },
-    { id:"asros",  name:"Asroşşşş", avatar:"", preview:"Abla Toktikten video attım izleseneee", time:"12:27" },
-    { id:"oe2",    name:"Oe2",    avatar:"", preview:"Fatih abime saygılar", time:"18:22" },
-    { id:"oe3",    name:"Oe3",    avatar:"", preview:"Ben ORUL ORULLLL......", time:"17:58" },
-    { id:"azra",   name:"Azra",   avatar:"", preview:"Yaroşşşş napıyon kız", time:"17:40" },
-  ];
+  const app = document.getElementById("app");
+  const listEl = document.getElementById("list");
+  const msgsEl = document.getElementById("msgs");
+  const headName = document.getElementById("headName");
+  const headAva = document.getElementById("headAva");
+  const headOnline = document.getElementById("headOnline");
+  const msgInput = document.getElementById("msgInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const backBtn = document.getElementById("back");
+  const q = document.getElementById("q");
 
-  // ===== DOM
-  const $ = (id)=>document.getElementById(id);
-  const listScreen = $("listScreen");
-  const chatScreen = $("chatScreen");
-  const chatList = $("chatList");
-  const chatBox = $("chat");
-  const chips = $("chips");
-  const backBtn = $("backBtn");
-  const headerName = $("headerName");
-  const headerStatus = $("headerStatus");
-  const headerAvatar = $("headerAvatar");
-  const toastWrap = $("toastWrap");
-  const msgInput = $("msgInput");
-  const sendBtn = $("sendBtn");
-  const plusBtn = $("plusBtn");
-
-  let currentChatId = null;
-
-  // ===== helpers
-  const escapeHtml = (s)=>String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");
-  const nowHHMM = ()=> {
-    const d=new Date();
-    return String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  const AVA = {
+    fatik: "/avatar-fatik.jpg",
+    anne: "/avatar-anne.jpg",
+    sevval: "/avatar-sevval.jpg",
+    asros: "/avatar-asros.jpg",
+    oe1: "/avatar-oe.jpg",
+    oe2: "/avatar-oe.jpg",
+    oe3: "/avatar-oe.jpg",
+    default: "/avatar-default.jpg"
   };
 
-  // ===== audio + vibration
-  let audioCtx=null, audioUnlocked=false;
-  function unlockAudio(){
-    if(audioUnlocked) return;
-    try{
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if(audioCtx.state==="suspended") audioCtx.resume();
-      audioUnlocked=true;
-    }catch(e){}
-  }
-  function buzz(){
-    try{ if(navigator.vibrate) navigator.vibrate([60,40,60]); }catch(e){}
-  }
-  function playMessageTone(){
-    if(!audioUnlocked || !audioCtx) return;
-    const now = audioCtx.currentTime + 0.02;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type="sine";
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    gain.gain.setValueAtTime(0.0001, now);
+  const chats = [
+    { id:"fatik", name:"Fatik", preview:"", time:"" },
+    { id:"sevval", name:"Şevval", preview:"aşkoooo", time:"" },
+    { id:"anne", name:"Anneeeyyy", preview:"Fatih oğlumu üzersen…", time:"" },
+    { id:"asros", name:"Asroşşşş", preview:"Toktikten video attım…", time:"" },
+    { id:"oe1", name:"Oe1", preview:"Fatih abim kraldır", time:"" },
+    { id:"oe2", name:"Oe2", preview:"Fatih abime saygılar", time:"" },
+    { id:"oe3", name:"Oe3", preview:"Abime yanlış yapılmaz", time:"" },
+  ];
 
-    function beep(t,f){
-      osc.frequency.setValueAtTime(f,t);
-      gain.gain.setValueAtTime(0.0001,t);
-      gain.gain.exponentialRampToValueAtTime(0.18,t+0.01);
-      gain.gain.exponentialRampToValueAtTime(0.0001,t+0.12);
-    }
-    beep(now, 880);
-    beep(now+0.16, 660);
+  let currentChatId = "fatik";
+  const storeKey = (id) => `chat_${id}_messages`;
 
-    osc.start(now);
-    osc.stop(now+0.35);
-    osc.onended=()=>{ try{osc.disconnect();gain.disconnect();}catch(e){} };
-  }
-  function playHeartbeat(durationMs=2600){
-    if(!audioUnlocked || !audioCtx) return;
-    const startAt = audioCtx.currentTime + 0.02;
-    const endAt = startAt + durationMs/1000;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type="sine";
-    osc.frequency.setValueAtTime(85,startAt);
-    gain.gain.setValueAtTime(0.0001,startAt);
-    osc.connect(gain); gain.connect(audioCtx.destination);
-
-    function thump(t,str){
-      gain.gain.setValueAtTime(0.0001,t);
-      gain.gain.exponentialRampToValueAtTime(Math.max(0.001,str), t+0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t+0.18);
-      osc.frequency.setValueAtTime(95,t);
-      osc.frequency.exponentialRampToValueAtTime(70, t+0.12);
-      osc.frequency.exponentialRampToValueAtTime(85, t+0.18);
-    }
-    let t=startAt;
-    while(t<endAt){
-      thump(t,0.18);
-      thump(t+0.22,0.12);
-      t+=0.95;
-    }
-    osc.start(startAt);
-    osc.stop(endAt+0.05);
-    osc.onended=()=>{ try{osc.disconnect();gain.disconnect();}catch(e){} };
+  function nowTime(){
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2,"0");
+    const mm = String(d.getMinutes()).padStart(2,"0");
+    return `${hh}:${mm}`;
   }
 
-  // ===== toast
-  function showToast(sender, message){
-    buzz(); playMessageTone();
-    const t=document.createElement("div");
-    t.className="toast";
-    t.innerHTML=`
-      <div class="toastTop">
-        <div class="appname"><span class="waIcon">W</span> WhatsApp</div>
-        <div>Şimdi</div>
-      </div>
-      <div class="toastMain">
-        <div class="toastAva">${escapeHtml(sender).slice(0,1).toUpperCase()}</div>
-        <div class="toastMeta">
-          <div class="toastName">${escapeHtml(sender)}</div>
-          <div class="toastMsg">${escapeHtml(message)}</div>
-        </div>
-      </div>
-    `;
-    toastWrap.appendChild(t);
-    setTimeout(()=>{ t.classList.add("out"); setTimeout(()=>t.remove(),260); }, 3000);
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
   }
 
-  // ===== header status
-  function setStatus(text){ headerStatus.textContent=text; }
-  function setOnline(){ setStatus("çevrimiçi"); }
-  function setTyping(){ setStatus("yazıyor…"); }
-
-  // ===== ticks
-  function ticksMarkup(state){
-    if(state==="sent") return `<span>✓</span>`;
-    if(state==="delivered") return `<span>✓</span><span>✓</span>`;
-    if(state==="read") return `<span>✓</span><span>✓</span>`;
-    return "";
-  }
-  function setTicks(bubbleEl, state){
-    const t = bubbleEl.querySelector(".ticks");
-    if(!t) return;
-    t.classList.toggle("read", state==="read");
-    t.innerHTML = ticksMarkup(state);
+  function getAvatar(id){
+    return AVA[id] || AVA.default;
   }
 
-  // ===== feature 4: dynamic preview
+  function loadMsgs(chatId){
+    try { return JSON.parse(localStorage.getItem(storeKey(chatId)) || "[]"); }
+    catch { return []; }
+  }
+
+  function saveMsgs(chatId, arr){
+    localStorage.setItem(storeKey(chatId), JSON.stringify(arr.slice(-60)));
+  }
+
+  function renderList(){
+    const term = (q.value||"").toLowerCase();
+    listEl.innerHTML = "";
+    chats
+      .filter(c => c.name.toLowerCase().includes(term))
+      .forEach(c=>{
+        const row = document.createElement("div");
+        row.className = "chatRow" + (c.id===currentChatId ? " active":"");
+        const ava = getAvatar(c.id);
+        row.innerHTML = `
+          <img class="avatar" src="${ava}" onerror="this.src='${AVA.default}'" alt="">
+          <div class="chatMeta">
+            <div class="rowTop">
+              <div class="name">${escapeHtml(c.name)}</div>
+              <div class="time">${escapeHtml(c.time||"")}</div>
+            </div>
+            <div class="preview">${escapeHtml(c.preview||"")}</div>
+          </div>
+        `;
+        row.onclick = ()=>openChat(c.id);
+        listEl.appendChild(row);
+      });
+  }
+
+  function renderMsgs(chatId){
+    const arr = loadMsgs(chatId);
+    msgsEl.innerHTML = arr.map(m=>{
+      const cls = m.role==="me" ? "bubble me" : "bubble you";
+      const tick = m.time ? `<div class="tick">${escapeHtml(m.time)}</div>` : "";
+      return `<div class="${cls}">${escapeHtml(m.text)}${tick}</div>`;
+    }).join("");
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+  }
+
+  function setHeader(chatId){
+    const c = chats.find(x=>x.id===chatId);
+    headName.textContent = c ? c.name : "—";
+    headAva.src = getAvatar(chatId);
+    headAva.onerror = ()=> headAva.src = AVA.default;
+    headOnline.textContent = "çevrimiçi";
+  }
+
   function updatePreview(chatId, text){
     const c = chats.find(x=>x.id===chatId);
     if(!c) return;
     c.preview = text;
+    c.time = nowTime();
+    renderList();
+  }
 
-    const row = document.querySelector(`.row[data-id="${CSS.escape(chatId)}"]`);
-    if(row){
-      const prev = row.querySelector(".prev");
-      if(prev) prev.textContent = text;
+  function pushMsg(chatId, role, text){
+    const arr = loadMsgs(chatId);
+    arr.push({ role, text, time: nowTime() });
+    saveMsgs(chatId, arr);
+    renderMsgs(chatId);
+    updatePreview(chatId, role==="me" ? text : text);
+  }
+
+  async function aiSend(chatId, userText){
+    // typing hissi
+    headOnline.textContent = "yazıyor…";
+    const history = loadMsgs(chatId).map(m => ({ role: m.role, text: m.text })).slice(-12);
+
+    const res = await fetch("/.netlify/functions/chat", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        chatId,
+        message: userText || "",
+        history
+      })
+    });
+
+    const data = await res.json().catch(()=>({ ok:false, reply:"Sunucu cevap veremedi" }));
+    headOnline.textContent = "çevrimiçi";
+
+    const reply = (data.reply || "").trim();
+    if(reply){
+      pushMsg(chatId, "you", reply);
     }
   }
 
-  // ===== bubble render
-  function addBubble(who, html, {time=nowHHMM(), ticks=null} = {}){
-    const d=document.createElement("div");
-    d.className="bubble "+(who==="me"?"me":"you");
-    d.innerHTML=`
-      <div class="content">${html}</div>
-      <div class="metaLine">
-        <span class="timeTxt">${escapeHtml(time)}</span>
-        ${ticks ? `<span class="ticks ${ticks==="read"?"read":""}">${ticksMarkup(ticks)}</span>` : ``}
-      </div>
-    `;
-    chatBox.appendChild(d);
-    chatBox.scrollTop = chatBox.scrollHeight;
-    return d;
-  }
+  async function openChat(chatId){
+    currentChatId = chatId;
+    setHeader(chatId);
+    renderList();
+    renderMsgs(chatId);
 
-  function addMeMessage(text){
-    const safe = escapeHtml(text);
-    if(currentChatId==="fatik"){
-      updatePreview("fatik", text.length>40 ? text.slice(0,40)+"…" : text);
+    // mobil görünüm
+    if(window.matchMedia("(max-width:820px)").matches){
+      app.classList.add("mobileChat");
     }
-    const b = addBubble("me", safe, { ticks:"sent" });
-    setTimeout(()=> setTicks(b, "delivered"), 700);
-    setTimeout(()=> setTicks(b, "read"), 1600);
-    return b;
-  }
 
-  function typingThenIncoming(text, cb){
-    setTyping();
-    const t = addBubble("you", "yazıyor...", {});
-    t.style.opacity = .6;
-    setTimeout(()=>{
-      t.remove();
-      buzz(); playMessageTone();
-      addBubble("you", escapeHtml(text));
-      if(currentChatId==="fatik"){
-        updatePreview("fatik", text.length>40 ? text.slice(0,40)+"…" : text);
-      }
-      setOnline();
-      cb && cb();
-    }, 1100);
-  }
-
-  // ===== chips
-  function setChips(btns){
-    chips.innerHTML="";
-    btns.forEach(b=>{
-      const el=document.createElement("button");
-      el.className="chip "+(b.variant||"");
-      el.textContent=b.label;
-      el.onclick=()=>{ unlockAudio(); b.onClick(); };
-      chips.appendChild(el);
-    });
-  }
-  function clearChips(){ chips.innerHTML=""; }
-
-  // ===== image overlay
-  function openImage(src){
-    const o=document.createElement("div");
-    o.className="overlay";
-    o.innerHTML=`<div class="box"><img src="${src}" alt="img"></div>`;
-    o.onclick=()=>o.remove();
-    document.body.appendChild(o);
-  }
-
-  // ===== emoji storms
-  function emojiStorm(emojis, count=60, fromTop=true){
-    const storm=document.createElement("div");
-    storm.className="storm";
-    document.body.appendChild(storm);
-    for(let i=0;i<count;i++){
-      const e=document.createElement("div");
-      e.className="emoji";
-      e.textContent=emojis[Math.floor(Math.random()*emojis.length)];
-      e.style.left=Math.random()*100+"vw";
-      e.style.top= fromTop ? (-Math.random()*30)+"vh" : (50+Math.random()*30)+"vh";
-      e.style.animationDelay=(Math.random()*0.35)+"s";
-      e.style.fontSize=(22+Math.random()*18)+"px";
-      storm.appendChild(e);
-    }
-    setTimeout(()=>storm.remove(),1500);
-  }
-  const angryStorm=()=>emojiStorm(["😡","🤬","😤","👿","💢"],65,true);
-  const kissStorm=()=>emojiStorm(["💋","😘","💖","😍"],55,false);
-
-  // ===== secret photo (naughty only)
-  let secretViewed=false;
-  function askPassword(){
-    if(secretViewed) return;
-    const o=document.createElement("div");
-    o.className="overlay";
-    o.innerHTML=`
-      <div class="box" onclick="event.stopPropagation()">
-        <p style="margin:0 0 10px 0;font-weight:900;">Şifreyi gir 😌</p>
-        <input id="pw" style="width:100%;padding:10px;border-radius:10px;border:1px solid #ccc;outline:none" placeholder="Şifre">
-        <button id="openBtn" style="margin-top:10px;padding:10px 16px;border:none;border-radius:999px;background:#25d366;color:#fff;font-weight:950;cursor:pointer;width:100%">Aç</button>
-        <div style="margin-top:8px;font-size:12px;opacity:.7">Şifre: <b>iamallyours</b></div>
-      </div>
-    `;
-    document.body.appendChild(o);
-    o.onclick=()=>o.remove();
-    unlockAudio();
-    o.querySelector("#openBtn").onclick=()=>checkPw(o);
-    o.querySelector("#pw").addEventListener("keydown",(e)=>{ if(e.key==="Enter") checkPw(o); });
-    o.querySelector("#pw").focus();
-  }
-  function checkPw(overlayEl){
-    const v=(overlayEl.querySelector("#pw").value||"").trim().toLowerCase();
-    if(v==="iamallyours"){
-      secretViewed=true;
-      overlayEl.remove();
-      showSecret();
-    }else{
-      const inp=overlayEl.querySelector("#pw");
-      inp.value=""; inp.style.borderColor="#e74c3c";
-      inp.placeholder="Yanlış… tekrar dene 😏"; inp.focus();
+    // ✅ AI ilk adımı atsın: sohbet boşsa otomatik başlat
+    const arr = loadMsgs(chatId);
+    if(arr.length === 0){
+      await aiSend(chatId, ""); // boş gönderiyoruz, backend “başlat” yapıyor
     }
   }
-  function animateText(el, text){
-    el.textContent=""; let i=0;
-    const t=setInterval(()=>{ el.textContent+=text[i++]; if(i>=text.length) clearInterval(t); }, 65);
-  }
-  function showSecret(){
-    const o=document.createElement("div");
-    o.className="overlay";
-    o.innerHTML=`
-      <div class="box" onclick="event.stopPropagation()">
-        <img src="secret.jpg" alt="secret">
-        <div class="ratatata shake" id="ratatata"></div>
-      </div>
-    `;
-    document.body.appendChild(o);
-    o.onclick=()=>o.remove();
-    animateText(o.querySelector("#ratatata"), "RATATATATATA");
-  }
 
-  // ===== “Hatce + Oe1” as timed toasts when entering Fatik
-  let fatikNotifsScheduled=false;
-  function scheduleFatikNotifs(){
-    if(fatikNotifsScheduled) return;
-    fatikNotifsScheduled=true;
-    setTimeout(()=> showToast("Hatce","Kanka bedoylayım sonra buluşalım."), 5000);
-    setTimeout(()=> showToast("Oe1","Fatih abim kraldır"), 15000);
-  }
-
-  // ===== feature 11: “baskın” only from Asroşşşş + Azra
-  let baskinDone=false;
-  function triggerRandomBaskin(){
-    if(baskinDone) return;
-    baskinDone=true;
-    const pool = [
-      { sender:"Asroşşşş", msg:"Abla Toktikten video attım izleseneee" },
-      { sender:"Azra", msg:"Yaroşşşş napıyon kız" }
-    ];
-    const pick = pool[Math.floor(Math.random()*pool.length)];
-    showToast(pick.sender, pick.msg);
-
-    setTimeout(()=>{
-      if(currentChatId!=="fatik") return;
-      typingThenIncoming("ya kim bunlar ya 😂", ()=>{});
-    }, 1400);
-  }
-
-  // ===== game
-  let naughty=false;
-
-  function startFatikChat(){
-    unlockAudio();
-    currentChatId="fatik";
-    chatBox.innerHTML="";
-    clearChips();
-    secretViewed=false;
-    naughty=false;
-
-    showChatHeader("Fatik", "avatar.jpg");
-    setOnline();
-
-    scheduleFatikNotifs();
-
-    // schedule “baskın” once (8-18 seconds)
-    const delay = 8000 + Math.floor(Math.random()*10000);
-    setTimeout(triggerRandomBaskin, delay);
-
-    typingThenIncoming("Hazırsan küçük bir oyun var 😏", ()=>{
-      setChips([
-        { label:"Normal oyun", onClick:()=>{ addMeMessage("Normal oyun"); normalStart(); } },
-        { label:"Yaramaz oyun 😈", variant:"danger", onClick:()=>{ addMeMessage("Yaramaz oyun 😈"); naughtyStart(); } },
-      ]);
-    });
-  }
-
-  function normalStart(){
-    typingThenIncoming("Şuna teyzeye elinde olsa ne yapmak isterdin askim?", ()=>{
-      setChips([
-        {
-          label:"Onu lafla dağıtırdım, ama tatlı tatlı 😇",
-          onClick:()=>{
-            addMeMessage("Onu lafla dağıtırdım, ama tatlı tatlı 😇");
-            typingThenIncoming("ben pek tatlı tatlı yapacağını sanmıyorum askim ama...", ()=> normalAfterQ1());
-          }
-        },
-        {
-          label:"İşitme cihazıyla şaka yapardım: “Teyze sesimi aç!” 😅",
-          onClick:()=>{
-            addMeMessage("İşitme cihazıyla şaka yapardım: “Teyze sesimi aç!” 😅");
-            typingThenIncoming("asdjklaskdlna askim komik kızsın keşke güzel de olsan hihihihi", ()=> normalAfterQ1());
-          }
-        }
-      ]);
-    });
-  }
-
-  function normalAfterQ1(){
-    clearChips();
-    setTimeout(()=>{
-      typingThenIncoming("OHA ASKİM ... KADIN 65 YAŞINDA NEMİŞ BUUU (biliyorum onu sevdiğini) ...", ()=>{
-        setTimeout(()=>{
-          typingThenIncoming("Neyse pekiii neden bugün beni sevmedin ??", ()=>{
-            setChips([
-              {
-                label:"Yoruldum askim ya",
-                onClick:()=>{
-                  addMeMessage("Yoruldum askim ya");
-                  clearChips();
-                  typingThenIncoming("Tamam hadi öyle olsun askim… al o zaman sana bi foti 😌", ()=> sendNormalPhotoPack());
-                }
-              },
-              {
-                label:"Çünkü küçük bir bok parçasısın sevmiyorum seni.",
-                variant:"danger",
-                onClick:()=>{
-                  addMeMessage("Çünkü küçük bir bok parçasısın sevmiyorum seni.");
-                  clearChips();
-                  buzz(); playMessageTone();
-                  addBubble("you", "Senin ağzına sıçarım Yaren..");
-                  updatePreview("fatik", "Senin ağzına sıçarım Yaren..");
-                  angryStorm();
-
-                  setTimeout(()=>{
-                    buzz(); playMessageTone();
-                    addBubble("you","Neyse gel bi öpeyim de barışalım 😌");
-                    updatePreview("fatik", "Neyse gel bi öpeyim de barışalım 😌");
-                    setTimeout(()=>{
-                      addMeMessage("Yeeeeyyyy lütfen hadi 😍");
-                      setTimeout(()=> sendNormalPhotoPack(), 900);
-                    }, 900);
-                  }, 1200);
-                }
-              }
-            ]);
-          });
-        },650);
-      });
-    },250);
-  }
-
-  function sendNormalPhotoPack(){
-    playHeartbeat(2600);
-    buzz(); playMessageTone();
-    addBubble("you", `<img class="chatimg" src="normal.jpg" alt="normal" onclick="openImage('normal.jpg')">`, {});
-    updatePreview("fatik", "📷 Fotoğraf");
-    kissStorm();
-    clearChips();
-  }
-
-  function naughtyStart(){
-    naughty=true;
-    secretViewed=false;
-    naughtyQ1();
-  }
-
-  function naughtyQ1(){
-    typingThenIncoming("Şuan yanında olsaydım ne yapardın?", ()=>{
-      setChips([
-        { label:"Kanguru gibi üstüne atlardım 😏", variant:"danger", onClick:()=>{
-          addMeMessage("Kanguru gibi üstüne atlardım 😏");
-          typingThenIncoming("mmmhh keşke yanımda olsaydın...", ()=> setTimeout(naughtyQ2,700));
-        }},
-        { label:"Sana kocaman sarılırdım 🫶", onClick:()=>{
-          addMeMessage("Sana kocaman sarılırdım 🫶");
-          typingThenIncoming("mmmhh keşke yanımda olsaydın...", ()=> setTimeout(naughtyQ2,700));
-        }},
-      ]);
-    });
-  }
-
-  function naughtyQ2(){
-    typingThenIncoming("Peki gözlerinin içine baksam ellerini sımsıkı tutsam ne hissederdin?", ()=>{
-      setChips([
-        { label:"Kendimi tehlikede hissederdim 😬", onClick:()=>{
-          addMeMessage("Kendimi tehlikede hissederdim 😬");
-          typingThenIncoming("Nasıl yaa görüşmemiz gereken konular var ..", ()=> setTimeout(naughtyEnd,700));
-        }},
-        { label:"Kendimi sana teslim ederdim 😈", variant:"danger", onClick:()=>{
-          addMeMessage("Kendimi sana teslim ederdim 😈");
-          typingThenIncoming("Nasıl yaa görüşmemiz gereken konular var ..", ()=> setTimeout(naughtyEnd,700));
-        }},
-      ]);
-    });
-  }
-
-  function naughtyEnd(){
-    clearChips();
-    typingThenIncoming("Bunu sadece sen görmelisin 😈", ()=>{
-      addBubble("you", `<div class="viewonce" onclick="askPassword()">👁️ 1 kez görüntüle</div>`);
-      updatePreview("fatik", "👁️ 1 kez görüntüle");
-    });
-  }
-
-  // ===== AI-enabled typing (Fatik only)
-  async function sendTyped(){
-    unlockAudio();
-    const txt = (msgInput.value || "").trim();
+  sendBtn.onclick = async ()=>{
+    const txt = (msgInput.value||"").trim();
     if(!txt) return;
     msgInput.value="";
+    pushMsg(currentChatId, "me", txt);
+    await aiSend(currentChatId, txt);
+  };
 
-    addMeMessage(txt);
+  msgInput.addEventListener("keydown", (e)=>{
+    if(e.key==="Enter") sendBtn.click();
+  });
 
-    if(currentChatId !== "fatik") return;
+  backBtn.onclick = ()=>{
+    app.classList.remove("mobileChat");
+  };
 
-    setTyping();
-    const typingBubble = addBubble("you", "yazıyor...", {});
-    typingBubble.style.opacity = .6;
+  q.addEventListener("input", renderList);
 
-    try{
-      const r = await fetch("/.netlify/functions/chat", {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({
-          message: txt,
-          mode: naughty ? "naughty" : "normal"
-        })
-      });
-
-      const data = await r.json();
-      const reply = (data.reply || "").trim() || "bi an afalladım 😅";
-
-      typingBubble.remove();
-
-      buzz(); playMessageTone();
-      addBubble("you", escapeHtml(reply));
-      updatePreview("fatik", reply.length > 40 ? reply.slice(0,40)+"…" : reply);
-      setOnline();
-    }catch(e){
-      typingBubble.remove();
-      addBubble("you", "internet gitti gibi… 😅");
-      setOnline();
-    }
-  }
-
-  // ===== list navigation
-  function showList(){
-    currentChatId=null;
-    listScreen.classList.add("active");
-    chatScreen.classList.remove("active");
-    backBtn.style.display="none";
-    headerName.textContent="Sohbetler";
-    headerAvatar.src="avatar.jpg";
-    headerStatus.textContent="WhatsApp gibi 😏";
-    chatBox.innerHTML="";
-    clearChips();
-  }
-  function showChatHeader(name, avatar){
-    backBtn.style.display="inline-grid";
-    headerName.textContent=name;
-    headerAvatar.src = avatar || "avatar.jpg";
-  }
-  function openSimpleChat(chatId){
-    unlockAudio();
-    currentChatId=chatId;
-    const c = chats.find(x=>x.id===chatId);
-    chatBox.innerHTML="";
-    clearChips();
-    showChatHeader(c.name, "avatar.jpg");
-    setOnline();
-
-    buzz(); playMessageTone();
-
-    if(chatId==="anne"){
-      addBubble("you","Fatih oğlumu çok seviyorum canım damadım");
-      addBubble("you", escapeHtml(c.preview));
-      return;
-    }
-    addBubble("you", escapeHtml(c.preview || "…"));
-  }
-
-  function renderList(){
-    chatList.innerHTML="";
-    chats.forEach(c=>{
-      const row=document.createElement("div");
-      row.className="row";
-      row.dataset.id = c.id;
-      const hasAvatar=!!c.avatar;
-      row.innerHTML=`
-        <div class="ava">${hasAvatar ? `<img class="ava" src="${c.avatar}" alt="">` : escapeHtml(c.name).slice(0,1).toUpperCase()}</div>
-        <div class="meta">
-          <div class="rname">${escapeHtml(c.name)}</div>
-          <div class="prev">${escapeHtml(c.preview || "")}</div>
-        </div>
-        <div class="time">${escapeHtml(c.time || "")}</div>
-      `;
-      const ava = row.querySelector(".ava");
-      if(hasAvatar){
-        ava.style.padding="0";
-        ava.style.overflow="hidden";
-        ava.style.background="transparent";
-      }
-      row.onclick=()=>{
-        listScreen.classList.remove("active");
-        chatScreen.classList.add("active");
-        if(c.id==="fatik") startFatikChat();
-        else openSimpleChat(c.id);
-      };
-      chatList.appendChild(row);
-    });
-  }
-
-  // ===== events
-  backBtn.onclick=showList;
-  sendBtn.onclick=sendTyped;
-  msgInput.addEventListener("keydown",(e)=>{ if(e.key==="Enter"){ e.preventDefault(); sendTyped(); }});
-  plusBtn.onclick=()=>{ unlockAudio(); showToast("WhatsApp", "Ekle butonu kapalı 😄"); };
-
-  window.openImage = openImage;
-  window.askPassword = askPassword;
-
+  // Başlat
   renderList();
-  showList();
+  openChat("fatik");
 </script>
 </body>
 </html>
-
-
